@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="profiles-project">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/profiles-project.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
