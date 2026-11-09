@@ -12,23 +12,39 @@ function ensureDir() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-function read<T>(file: string, seed: () => T[]): T[] {
-  ensureDir();
-  if (!fs.existsSync(file)) {
-    const data = seed();
-    fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf8");
-    return data;
-  }
+/**
+ * 파일 저장이 불가능한 환경(Vercel 등 읽기 전용 서버리스)을 위한 메모리 폴백.
+ * 데모 용도: 인스턴스가 내려가면 데이터는 초기 시드로 되돌아간다.
+ */
+const memory = new Map<string, unknown[]>();
+
+function tryWrite(file: string, data: unknown[]) {
   try {
-    return JSON.parse(fs.readFileSync(file, "utf8")) as T[];
+    ensureDir();
+    fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf8");
   } catch {
-    return [];
+    // 읽기 전용 파일시스템이면 메모리에만 보관
   }
 }
 
+function read<T>(file: string, seed: () => T[]): T[] {
+  if (memory.has(file)) return memory.get(file) as T[];
+  let data: T[];
+  try {
+    data = fs.existsSync(file)
+      ? (JSON.parse(fs.readFileSync(file, "utf8")) as T[])
+      : seed();
+  } catch {
+    data = seed();
+  }
+  memory.set(file, data);
+  tryWrite(file, data);
+  return data;
+}
+
 function write<T>(file: string, data: T[]) {
-  ensureDir();
-  fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf8");
+  memory.set(file, data);
+  tryWrite(file, data);
 }
 
 function dayOffset(days: number) {
